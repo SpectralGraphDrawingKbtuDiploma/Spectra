@@ -9,23 +9,50 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type App struct {
 	m                            *sync.Mutex
 	processLimit                 int
 	currentWorkingProcessesCount int
-	logger                       zap.Logger
+	logger                       *zap.Logger
+	isClosed                     atomic.Bool
+	allDone                      chan struct{}
+}
+
+func NewApp(logger *zap.Logger) *App {
+	return &App{
+		processLimit:                 1,
+		currentWorkingProcessesCount: 0,
+		m:                            &sync.Mutex{},
+		logger:                       logger,
+	}
+}
+
+func (app *App) GracefulShutdown() {
+	app.isClosed.Store(true)
+	select {
+	case <-app.allDone:
+		fmt.Println("All processes have been shut down")
+	case <-time.After(5 * time.Second):
+		fmt.Println("Timeout waiting for all processes to terminate")
+	}
 }
 
 func (app *App) createJob(w http.ResponseWriter, graph GraphDTO) {
 	app.m.Lock()
-	if app.processLimit <= app.currentWorkingProcessesCount {
-		app.m.Unlock()
-		w.WriteHeader(http.StatusTooManyRequests)
-		return
-	}
+	app.currentWorkingProcessesCount++
 	app.m.Unlock()
+	defer func() {
+		app.m.Lock()
+		app.currentWorkingProcessesCount--
+		if app.currentWorkingProcessesCount == 0 {
+			app.allDone <- struct{}{}
+		}
+		app.m.Unlock()
+	}()
 	path := fmt.Sprintf("/var/worker/graph-%s", graph.ID)
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
@@ -48,6 +75,7 @@ func (app *App) createJob(w http.ResponseWriter, graph GraphDTO) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		_ = os.Remove(filePath)
+		return
 	}
 	encoder := json.NewEncoder(w)
 	res := TaskStatus{
@@ -61,6 +89,10 @@ func (app *App) createJob(w http.ResponseWriter, graph GraphDTO) {
 }
 
 func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
+	if app.isClosed.Load() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	var graph GraphDTO
 	err := decoder.Decode(&graph)
@@ -70,7 +102,14 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	if graph.Edges != nil {
-		app.createJob(w, graph)
+		go app.createJob(w, graph)
+		w.WriteHeader(http.StatusOK)
+		res := TaskStatus{
+			ID:     *graph.ID,
+			Status: "created",
+		}
+		encoder := json.NewEncoder(w)
+		_ = encoder.Encode(res)
 		return
 	}
 	path := fmt.Sprintf("/var/worker/graph-%s", graph.ID)
@@ -88,6 +127,7 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		if entry.Name() == "result.txt" {
 			res.Status = "completed"
 			res.Result = []float64{1.0, 2.0}
+			break
 		}
 	}
 	err = encoder.Encode(res)
