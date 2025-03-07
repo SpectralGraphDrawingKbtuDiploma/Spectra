@@ -41,22 +41,24 @@ func (app *App) GracefulShutdown() {
 	}
 }
 
-func (app *App) createJob(w http.ResponseWriter, graph GraphDTO) {
+func (app *App) createJob(graph GraphDTO) {
 	app.m.Lock()
 	app.currentWorkingProcessesCount++
 	app.m.Unlock()
 	defer func() {
 		app.m.Lock()
 		app.currentWorkingProcessesCount--
-		if app.currentWorkingProcessesCount == 0 {
+		if app.isClosed.Load() && app.currentWorkingProcessesCount == 0 {
 			app.allDone <- struct{}{}
 		}
 		app.m.Unlock()
 	}()
 	path := fmt.Sprintf("/var/worker/graph-%s", graph.ID)
+	logFile, _ := os.Create(filepath.Join(path, "log.txt"))
+	defer logFile.Close()
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		http.Error(w, "не удалось создать директорию для записи", http.StatusInternalServerError)
+		_, _ = logFile.WriteString(fmt.Sprintf("Failed to create directory: %s\n", err))
 		return
 	}
 	filePath := filepath.Join(path, "graph.txt")
@@ -65,26 +67,15 @@ func (app *App) createJob(w http.ResponseWriter, graph GraphDTO) {
 	for i := 0; i < len(graph.Edges); i += 2 {
 		_, err = file.Write([]byte(fmt.Sprintf("%v %v", graph.Edges[i], graph.Edges[i+1])))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			_ = os.Remove(filePath)
+			_, _ = logFile.WriteString(fmt.Sprintf("Failed to write to file: %v\n", err))
 			return
 		}
 	}
 	cmd := exec.Command("ls -l")
 	err = cmd.Start()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		_ = os.Remove(filePath)
+		_, _ = logFile.WriteString(fmt.Sprintf("Failed to start command: %v\n", err))
 		return
-	}
-	encoder := json.NewEncoder(w)
-	res := TaskStatus{
-		ID:     *graph.ID,
-		Status: "created",
-	}
-	err = encoder.Encode(res)
-	if err != nil {
-		app.logger.Error("err while encoding task status", zap.Error(err))
 	}
 }
 
@@ -102,7 +93,7 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	if graph.Edges != nil {
-		go app.createJob(w, graph)
+		go app.createJob(graph)
 		w.WriteHeader(http.StatusOK)
 		res := TaskStatus{
 			ID:     *graph.ID,
