@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  go_server:
+    build: .
+    container_name: go_server
+    restart: always
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    command: ["/app/server"]

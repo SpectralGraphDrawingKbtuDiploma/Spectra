@@ -53,7 +53,7 @@ func (app *App) createJob(graph GraphDTO) {
 		}
 		app.m.Unlock()
 	}()
-	path := fmt.Sprintf("/var/worker/graph-%s", graph.ID)
+	path := fmt.Sprintf("/var/worker/graph-%s", *graph.ID)
 	logFile, _ := os.Create(filepath.Join(path, "log.txt"))
 	defer logFile.Close()
 	err := os.MkdirAll(path, os.ModePerm)
@@ -65,13 +65,15 @@ func (app *App) createJob(graph GraphDTO) {
 	file, err := os.Create(filePath)
 	defer file.Close()
 	for i := 0; i < len(graph.Edges); i += 2 {
-		_, err = file.Write([]byte(fmt.Sprintf("%v %v", graph.Edges[i], graph.Edges[i+1])))
+		_, err = file.Write([]byte(fmt.Sprintf("%v %v\n", graph.Edges[i], graph.Edges[i+1])))
 		if err != nil {
 			_, _ = logFile.WriteString(fmt.Sprintf("Failed to write to file: %v\n", err))
 			return
 		}
 	}
-	cmd := exec.Command("ls -l")
+	fmt.Println("$$$", path)
+	cmd := exec.Command("sh", "draw.sh", fmt.Sprintf("%s/graph.txt", path), path)
+	//cmd := exec.Command(fmt.Sprintf("ls -l"))
 	err = cmd.Start()
 	if err != nil {
 		_, _ = logFile.WriteString(fmt.Sprintf("Failed to start command: %v\n", err))
@@ -103,7 +105,7 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		_ = encoder.Encode(res)
 		return
 	}
-	path := fmt.Sprintf("/var/worker/graph-%s", graph.ID)
+	path := fmt.Sprintf("/var/worker/graph-%s", *graph.ID)
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -115,10 +117,13 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		Status: "processing",
 	}
 	for _, entry := range entries {
-		if entry.Name() == "result.txt" {
+		if entry.Name() == "graph_edges_only.png" {
+			fmt.Println(entry.Name(), "$$$")
+			filePath := filepath.Join(path, "graph_edges_only.png")
+			fmt.Println(filePath)
 			res.Status = "completed"
-			res.Result = []float64{1.0, 2.0}
-			break
+			_ = encoder.Encode(res)
+			return
 		}
 	}
 	err = encoder.Encode(res)
