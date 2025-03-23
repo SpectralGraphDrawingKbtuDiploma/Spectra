@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  go_server:
+  worker:
     build: .
-    container_name: go_server
+    container_name: worker
     restart: always
     ports:
       - "8000:8000"
