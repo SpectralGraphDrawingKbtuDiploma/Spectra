@@ -42,6 +42,8 @@ COPY ./draw.py .
 COPY ./draw.sh .
 COPY ./script.cpp .
 COPY ./graph.txt ./graph/graph.txt
+COPY ./draw.c .
+COPY ./stb_image_write.h .
 
 # Открываем порт
 EXPOSE 8080
