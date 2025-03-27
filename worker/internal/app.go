@@ -117,9 +117,9 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		Status: "processing",
 	}
 	for _, entry := range entries {
-		if entry.Name() == "graph_edges_only.png" {
+		if entry.Name() == "out.png" {
 			fmt.Println(entry.Name(), "$$$")
-			filePath := filepath.Join(path, "graph_edges_only.png")
+			filePath := filepath.Join(path, "out.png")
 			fmt.Println(filePath)
 			res.Status = "completed"
 			_ = encoder.Encode(res)

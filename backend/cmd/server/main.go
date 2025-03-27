@@ -1,7 +1,10 @@
 package main
 
 import (
+	"backend/internal/scheduler"
+	"backend/internal/service"
 	"log"
+	"os"
 
 	"backend/api"
 	"backend/internal/config"
@@ -10,6 +13,7 @@ import (
 
 func main() {
 	// Load configuration
+	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 	cfg := config.Load()
 
 	// Connect to database
@@ -24,8 +28,19 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	jobCreatedCh := make(chan struct{}, 100)
+	taskService := service.NewTaskService(db)
+	mtxService := service.NewMtxService(db, jobCreatedCh)
+	s := scheduler.NewScheduler(
+		taskService,
+		mtxService,
+		logger,
+		jobCreatedCh,
+		db,
+	)
+	s.Start()
 	// Start API server
-	if err := api.StartServer(cfg, db); err != nil {
+	if err := api.StartServer(cfg, mtxService); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }

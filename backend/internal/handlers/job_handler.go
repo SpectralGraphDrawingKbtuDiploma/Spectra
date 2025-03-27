@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,20 +11,20 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// MtxHandler handles HTTP requests for MTX files
-type MtxHandler struct {
-	Service *service.MtxService
+// JobsHandler handles HTTP requests for MTX files
+type JobsHandler struct {
+	Service *service.JobService
 }
 
-// NewMtxHandler creates a new MTX handler
-func NewMtxHandler(db *sql.DB) *MtxHandler {
-	return &MtxHandler{
-		Service: service.NewMtxService(db),
+// NewJobsHandler creates a new MTX handler
+func NewJobsHandler(mtxService *service.JobService) *JobsHandler {
+	return &JobsHandler{
+		Service: mtxService,
 	}
 }
 
-// UploadMtx handles MTX file uploads
-func (h *MtxHandler) UploadMtx(w http.ResponseWriter, r *http.Request) {
+// UploadJob handles MTX file uploads
+func (h *JobsHandler) UploadJob(w http.ResponseWriter, r *http.Request) {
 	// Parse form data
 	err := r.ParseMultipartForm(10 << 20) // 10 MB limit
 	if err != nil {
@@ -49,7 +48,7 @@ func (h *MtxHandler) UploadMtx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to database
-	id, err := h.Service.SaveMtxFile(header.Filename, string(content))
+	id, err := h.Service.SaveJob(header.Filename, string(content))
 	if err != nil {
 		http.Error(w, "Failed to save file: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -64,8 +63,8 @@ func (h *MtxHandler) UploadMtx(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetMtx returns an MTX file by ID
-func (h *MtxHandler) GetMtx(w http.ResponseWriter, r *http.Request) {
+// GetJob returns an MTX file by ID
+func (h *JobsHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 	// Get ID from URL params
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -75,7 +74,7 @@ func (h *MtxHandler) GetMtx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch file from database
-	file, err := h.Service.GetMtxFile(id)
+	file, err := h.Service.GetJob(id)
 	if err != nil {
 		if err.Error() == "file not found" {
 			http.Error(w, "File not found", http.StatusNotFound)
@@ -90,9 +89,9 @@ func (h *MtxHandler) GetMtx(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(file)
 }
 
-// ListMtx returns list of all MTX files
-func (h *MtxHandler) ListMtx(w http.ResponseWriter, r *http.Request) {
-	files, err := h.Service.ListMtxFiles()
+// ListJobs returns list of all MTX files
+func (h *JobsHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
+	files, err := h.Service.ListJobs(false)
 	if err != nil {
 		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -102,8 +101,8 @@ func (h *MtxHandler) ListMtx(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(files)
 }
 
-// DownloadMtx provides raw MTX file content for download
-func (h *MtxHandler) DownloadMtx(w http.ResponseWriter, r *http.Request) {
+// DownloadJob provides raw MTX file content for download
+func (h *JobsHandler) DownloadJob(w http.ResponseWriter, r *http.Request) {
 	// Get ID from URL params
 	params := mux.Vars(r)
 	id, err := strconv.Atoi(params["id"])
@@ -113,7 +112,7 @@ func (h *MtxHandler) DownloadMtx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch file from database
-	file, err := h.Service.GetMtxFile(id)
+	file, err := h.Service.GetJob(id)
 	if err != nil {
 		if err.Error() == "file not found" {
 			http.Error(w, "File not found", http.StatusNotFound)

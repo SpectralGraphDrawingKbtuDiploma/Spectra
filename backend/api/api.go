@@ -1,7 +1,7 @@
 package api
 
 import (
-	"database/sql"
+	"backend/internal/service"
 	"log"
 	"net/http"
 
@@ -11,18 +11,18 @@ import (
 )
 
 // StartServer starts the HTTP server
-func StartServer(cfg *config.Config, db *sql.DB) error {
+func StartServer(cfg *config.Config, service *service.JobService) error {
 	// Create handlers
-	mtxHandler := handlers.NewMtxHandler(db)
+	mtxHandler := handlers.NewJobsHandler(service)
 
 	// Create router
 	router := mux.NewRouter()
 
 	// API routes
-	router.HandleFunc("/api/mtx", mtxHandler.UploadMtx).Methods("POST")
-	router.HandleFunc("/api/mtx", mtxHandler.ListMtx).Methods("GET")
-	router.HandleFunc("/api/mtx/{id:[0-9]+}", mtxHandler.GetMtx).Methods("GET")
-	router.HandleFunc("/api/mtx/{id:[0-9]+}/download", mtxHandler.DownloadMtx).Methods("GET")
+	router.HandleFunc("/api/mtx", mtxHandler.UploadJob).Methods("POST")
+	router.HandleFunc("/api/mtx", mtxHandler.ListJobs).Methods("GET")
+	router.HandleFunc("/api/mtx/{id:[0-9]+}", mtxHandler.GetJob).Methods("GET")
+	router.HandleFunc("/api/mtx/{id:[0-9]+}/download", mtxHandler.DownloadJob).Methods("GET")
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

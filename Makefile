@@ -14,11 +14,11 @@ build:
 
 # Start all services in detached mode
 up:
-	docker-compose -f $(COMPOSE_FILE) up -d
+	docker-compose -f $(COMPOSE_FILE) up --build -d
 
 # Stop and remove all containers, networks
 down:
-	docker-compose -f $(COMPOSE_FILE) down --remove-orphans
+	docker-compose -f $(COMPOSE_FILE) down --remove-orphans -v
 
 # Restart all services
 restart: down up
