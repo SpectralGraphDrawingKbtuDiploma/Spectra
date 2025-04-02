@@ -45,9 +45,9 @@ func (s *JobService) SaveJob(filename string, content string) (int, error) {
 func (s *JobService) GetJob(id int) (models.Job, error) {
 	var file models.Job
 	err := s.DB.QueryRow(
-		"SELECT id, filename, content, dimensions, created_at FROM jobs WHERE id = $1",
+		"SELECT id, filename, content, dimensions, created_at, status FROM jobs WHERE id = $1",
 		id,
-	).Scan(&file.ID, &file.Filename, &file.Content, &file.Dimensions, &file.CreatedAt)
+	).Scan(&file.ID, &file.Filename, &file.Content, &file.Dimensions, &file.CreatedAt, &file.Status)
 
 	if err == sql.ErrNoRows {
 		return file, errors.New("file not found")
@@ -56,14 +56,21 @@ func (s *JobService) GetJob(id int) (models.Job, error) {
 	return file, err
 }
 
-func (s *JobService) ListJobs(notScheduledOnly bool) ([]models.JobList, error) {
+func (s *JobService) ListJobs(status *string) ([]models.JobList, error) {
+	var rows *sql.Rows
+	var err error
 	que := "SELECT id, filename, dimensions, created_at FROM jobs ORDER BY created_at DESC"
-	if notScheduledOnly {
-		que = "SELECT id, filename, dimensions, created_at FROM jobs WHERE scheduled=FALSE ORDER BY created_at DESC"
+	if status != nil {
+		que = "SELECT id, filename, dimensions, created_at FROM jobs WHERE status=$1 ORDER BY created_at DESC"
+		rows, err = s.DB.Query(
+			que,
+			*status,
+		)
+	} else {
+		rows, err = s.DB.Query(
+			que,
+		)
 	}
-	rows, err := s.DB.Query(
-		que,
-	)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +89,7 @@ func (s *JobService) ListJobs(notScheduledOnly bool) ([]models.JobList, error) {
 }
 
 func (s *JobService) ScheduleJobInTx(id int, tx *sql.Tx) error {
-	que := "UPDATE jobs SET scheduled=TRUE WHERE id = $1"
+	que := "UPDATE jobs SET status='executing' WHERE id = $1"
 	_, err := tx.Exec(que, id)
 	return err
 }

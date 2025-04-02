@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/internal/clients"
 	"backend/internal/scheduler"
 	"backend/internal/service"
 	"log"
@@ -31,12 +32,14 @@ func main() {
 	jobCreatedCh := make(chan struct{}, 100)
 	taskService := service.NewTaskService(db)
 	mtxService := service.NewMtxService(db, jobCreatedCh)
+	workerClient := clients.NewWorkerClient(cfg.WorkerHost)
 	s := scheduler.NewScheduler(
 		taskService,
 		mtxService,
 		logger,
 		jobCreatedCh,
 		db,
+		workerClient,
 	)
 	s.Start()
 	// Start API server

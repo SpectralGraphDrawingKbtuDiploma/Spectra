@@ -35,8 +35,10 @@ func InitSchema(db *sql.DB) error {
             filename VARCHAR(255) NOT NULL,
             content TEXT NOT NULL,
             dimensions VARCHAR(50),
-            scheduled BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            status VARCHAR(50) DEFAULT 'created',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            error TEXT,
+            result_url TEXT
         );
 		CREATE TABLE IF NOT EXISTS tasks (
 			id SERIAL PRIMARY KEY,

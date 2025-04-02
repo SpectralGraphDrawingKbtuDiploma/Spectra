@@ -209,6 +209,9 @@ int main(int argc, char *argv[])
     if (width < 1200) width = 1200;
     if (height < 800) height = 800;
 
+    width = 1200;
+    height = 800;
+
     // Find bounding box
     double minx = 1e30, maxx = -1e30;
     double miny = 1e30, maxy = -1e30;

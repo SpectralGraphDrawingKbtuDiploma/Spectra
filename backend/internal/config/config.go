@@ -15,6 +15,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	ServerPort string
+	WorkerHost string
 }
 
 // Load loads configuration from environment variables
@@ -32,6 +33,7 @@ func Load() *Config {
 		DBPassword: getEnv("DB_PASSWORD", "postgres"),
 		DBName:     getEnv("DB_NAME", "mtxdb"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
+		WorkerHost: getEnv("WORKER_HOSTS", "http://worker:8000"),
 	}
 }
 
