@@ -25,7 +25,7 @@ RUN apt update && apt install -y \
 
 # Создаём виртуальное окружение и устанавливаем Python-зависимости
 RUN python3 -m venv /app/venv \
-    && /app/venv/bin/pip install --no-cache-dir numpy matplotlib
+    && /app/venv/bin/pip install --no-cache-dir numpy matplotlib boto3
 
 
 ARG EIGEN_PATH=/usr/local/include/eigen3/
@@ -44,6 +44,7 @@ COPY ./script.cpp .
 COPY ./graph.txt ./graph/graph.txt
 COPY ./draw.c .
 COPY ./stb_image_write.h .
+COPY ./upload_to_s3.py .
 
 # Открываем порт
 EXPOSE 8080

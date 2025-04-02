@@ -47,7 +47,7 @@ func (t *TaskService) GetTaskByStatus(status string) (*models.Task, error) {
 		SELECT id, file_id, nodes_count, edges_array, mapping_array, status, created_at, updated_at
 		FROM tasks
 		WHERE status = $1
-		ORDER BY updated_at ASC
+		ORDER BY RANDOM()
 		LIMIT 1
 	`
 

@@ -36,9 +36,7 @@ func InitSchema(db *sql.DB) error {
             content TEXT NOT NULL,
             dimensions VARCHAR(50),
             status VARCHAR(50) DEFAULT 'created',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            error TEXT,
-            result_url TEXT
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 		CREATE TABLE IF NOT EXISTS tasks (
 			id SERIAL PRIMARY KEY,
@@ -48,7 +46,9 @@ func InitSchema(db *sql.DB) error {
 			mapping_array INTEGER[],
 			status VARCHAR(50) DEFAULT 'created',
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		    error TEXT,
+		    result_url TEXT
 		);
     `)
 

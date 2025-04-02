@@ -6,8 +6,8 @@ type GraphDTO struct {
 }
 
 type TaskStatus struct {
-	ID     string    `json:"id"`
-	Status string    `json:"status"`
-	Result []float64 `json:"result"`
-	Err    *string   `json:"err"`
+	ID     string  `json:"id"`
+	Status string  `json:"status"`
+	Err    *string `json:"err"`
+	Result *string `json:"result"`
 }

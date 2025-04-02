@@ -51,6 +51,7 @@ func NewScheduler(
 func (s *Scheduler) Start() {
 	go s.taskCreator()
 	go s.taskProcessor()
+	go s.pollTaskStatus()
 }
 
 func (s *Scheduler) Stop() {
@@ -222,4 +223,54 @@ func (s *Scheduler) getCreatedTask() (*models.Task, error) {
 		return nil, err
 	}
 	return task, nil
+}
+
+func (s *Scheduler) pollTaskStatus() {
+	for {
+		task, err := s.taskService.GetTaskByStatus("executing")
+		if err != nil {
+			s.logger.Println("occurred error during getting task", err)
+			<-time.After(2 * time.Second)
+			continue
+		}
+		if task == nil {
+			s.logger.Println("no running task found")
+			<-time.After(10 * time.Second)
+			continue
+		}
+		req := dto.TaskRequest{
+			ID:    strconv.Itoa(task.ID),
+			Edges: nil,
+		}
+		resp, err := s.workerClient.Ping(req)
+		if err != nil {
+			s.logger.Println("occurred error during ping task", err)
+			<-time.After(2 * time.Second)
+			continue
+		}
+		if resp.Status == "completed" {
+			s.logger.Println(fmt.Sprintf("task %v completed, saving results", task.ID))
+			tx, err := s.db.Begin()
+			if err != nil {
+				s.logger.Println("occurred error during begin transaction", err)
+				<-time.After(10 * time.Second)
+				continue
+			}
+			err = s.taskService.CompleteTaskInTx(
+				task.ID,
+				resp.Status,
+				resp.Error,
+				resp.Result,
+				tx,
+			)
+			if err != nil {
+				s.logger.Println("occurred error during complete task", err)
+				_ = tx.Rollback()
+				<-time.After(2 * time.Second)
+				continue
+			}
+			_ = tx.Commit()
+		}
+		<-time.After(2 * time.Second)
+	}
 }

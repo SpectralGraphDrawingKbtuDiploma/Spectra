@@ -72,7 +72,7 @@ func (app *App) createJob(graph GraphDTO) {
 		}
 	}
 	fmt.Println("$$$", path)
-	cmd := exec.Command("sh", "draw.sh", fmt.Sprintf("%s/graph.txt", path), path)
+	cmd := exec.Command("sh", "draw.sh", fmt.Sprintf("%s/graph.txt", path), path, *graph.ID)
 	//cmd := exec.Command(fmt.Sprintf("ls -l"))
 	err = cmd.Start()
 	if err != nil {
@@ -117,11 +117,34 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		Status: "processing",
 	}
 	for _, entry := range entries {
-		if entry.Name() == "out.png" {
+		if entry.Name() == "result.txt" {
 			fmt.Println(entry.Name(), "$$$")
-			filePath := filepath.Join(path, "out.png")
+			filePath := filepath.Join(path, "result.txt")
 			fmt.Println(filePath)
 			res.Status = "completed"
+			// Read result.txt file
+			if resultContent, err := os.ReadFile(filePath); err == nil {
+				// Save content to Result field
+				content := string(resultContent)
+				res.Result = &content
+			} else {
+				// If there's an error reading result.txt, report it
+				errMsg := fmt.Sprintf("Failed to read result file: %v", err)
+				res.Err = &errMsg
+			}
+
+			_ = encoder.Encode(res)
+			return
+		}
+		if entry.Name() == "error.txt" {
+			// Check if error.txt exists and read it
+			res.Status = "completed"
+			errFilePath := filepath.Join(path, "error.txt")
+			if errFileContent, err := os.ReadFile(errFilePath); err == nil && len(errFileContent) > 0 {
+				// If error.txt exists and has content, read it into Err field
+				errContent := string(errFileContent)
+				res.Err = &errContent
+			}
 			_ = encoder.Encode(res)
 			return
 		}
