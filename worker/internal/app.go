@@ -61,16 +61,21 @@ func (app *App) createJob(graph GraphDTO) {
 		_, _ = logFile.WriteString(fmt.Sprintf("Failed to create directory: %s\n", err))
 		return
 	}
-	filePath := filepath.Join(path, "graph.txt")
+	filePath := filepath.Join(path, "example.mtx")
 	file, err := os.Create(filePath)
 	defer file.Close()
-	for i := 0; i < len(graph.Edges); i += 2 {
-		_, err = file.Write([]byte(fmt.Sprintf("%v %v\n", graph.Edges[i], graph.Edges[i+1])))
-		if err != nil {
-			_, _ = logFile.WriteString(fmt.Sprintf("Failed to write to file: %v\n", err))
-			return
-		}
+	if err != nil {
+		_, _ = logFile.WriteString(fmt.Sprintf("Failed to create file: %s\n", err))
+		return
 	}
+	_, _ = file.WriteString(*graph.Content)
+	//for i := 0; i < len(graph.Edges); i += 2 {
+	//	_, err = file.Write([]byte(fmt.Sprintf("%v %v\n", graph.Edges[i], graph.Edges[i+1])))
+	//	if err != nil {
+	//		_, _ = logFile.WriteString(fmt.Sprintf("Failed to write to file: %v\n", err))
+	//		return
+	//	}
+	//}
 	fmt.Println("$$$", path)
 	cmd := exec.Command("sh", "draw.sh", fmt.Sprintf("%s/graph.txt", path), path, *graph.ID)
 	//cmd := exec.Command(fmt.Sprintf("ls -l"))
@@ -94,7 +99,7 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	if graph.Edges != nil {
+	if graph.Content != nil {
 		go app.createJob(graph)
 		w.WriteHeader(http.StatusOK)
 		res := TaskStatus{

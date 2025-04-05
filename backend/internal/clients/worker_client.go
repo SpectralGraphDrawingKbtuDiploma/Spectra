@@ -25,7 +25,7 @@ func NewWorkerClient(workerHost string) *WorkerClient {
 }
 
 // Ping sends a ping request to the worker to check if it's available
-func (c *WorkerClient) Ping(taskReq dto.TaskRequest) (*dto.TaskResponse, error) {
+func (c *WorkerClient) Ping(taskReq dto.JobRequest) (*dto.JobResponse, error) {
 	// Construct the URL for the ping endpoint
 	url := c.workerHost
 
@@ -57,7 +57,7 @@ func (c *WorkerClient) Ping(taskReq dto.TaskRequest) (*dto.TaskResponse, error) 
 	}
 
 	// Decode the response
-	var taskResp dto.TaskResponse
+	var taskResp dto.JobResponse
 	if err := json.NewDecoder(resp.Body).Decode(&taskResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}

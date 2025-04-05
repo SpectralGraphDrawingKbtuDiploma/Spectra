@@ -36,21 +36,23 @@ func InitSchema(db *sql.DB) error {
             content TEXT NOT NULL,
             dimensions VARCHAR(50),
             status VARCHAR(50) DEFAULT 'created',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            error TEXT,
+            result_url TEXT
         );
-		CREATE TABLE IF NOT EXISTS tasks (
-			id SERIAL PRIMARY KEY,
-			file_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-			nodes_count INTEGER NOT NULL,
-			edges_array INTEGER[],
-			mapping_array INTEGER[],
-			status VARCHAR(50) DEFAULT 'created',
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		    error TEXT,
-		    result_url TEXT
-		);
     `)
-
 	return err
 }
+
+//CREATE TABLE IF NOT EXISTS tasks (
+//id SERIAL PRIMARY KEY,
+//file_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+//nodes_count INTEGER NOT NULL,
+//edges_array INTEGER[],
+//mapping_array INTEGER[],
+//status VARCHAR(50) DEFAULT 'created',
+//created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//error TEXT,
+//result_url TEXT
+//);

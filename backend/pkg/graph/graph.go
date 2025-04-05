@@ -55,7 +55,10 @@ func (g *Graph) dfs(v int) {
 func (g *Graph) GetNextComponent() *Component {
 	for ; g.cur <= g.n; g.cur++ {
 		if _, ok := g.visited[g.cur]; !ok {
-			g.component = new(Component)
+			g.component = &Component{
+				Edges: []int{},
+				Nodes: []int{},
+			}
 			g.dfs(g.cur)
 			return g.component
 		}

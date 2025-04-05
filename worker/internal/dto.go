@@ -1,8 +1,8 @@
 package internal
 
 type GraphDTO struct {
-	ID    *string `json:"id"`
-	Edges []int   `json:"edges"`
+	ID      *string `json:"id"`
+	Content *string `json:"content"`
 }
 
 type TaskStatus struct {

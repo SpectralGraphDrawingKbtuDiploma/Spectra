@@ -11,9 +11,15 @@ set -e
 
 echo "Starting processing pipeline..."
 
+echo "clearing mtx"
+if ! /app/venv/bin/python ./cleaner.py "$2"/example.mtx "$2"/graph.txt; then
+    log_error "Failed to upload files to storage" "$2"
+    exit 1
+fi
+
 # Compile C++ code with optimization
 echo "Compiling C++ code..."
-if ! g++ script.cpp -I/usr/local/include/eigen3 -o spectral_embed -O2; then
+if ! g++ script.cpp -I/usr/local/include/eigen3 -I/usr/local/include/spectra -o spectral_embed -O2; then
     log_error "Failed to compile C++ code" "$2"
     exit 1
 fi

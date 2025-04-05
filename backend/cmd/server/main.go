@@ -30,12 +30,10 @@ func main() {
 	}
 
 	jobCreatedCh := make(chan struct{}, 100)
-	taskService := service.NewTaskService(db)
-	mtxService := service.NewMtxService(db, jobCreatedCh)
+	jobService := service.NewJobService(db, jobCreatedCh)
 	workerClient := clients.NewWorkerClient(cfg.WorkerHost)
 	s := scheduler.NewScheduler(
-		taskService,
-		mtxService,
+		jobService,
 		logger,
 		jobCreatedCh,
 		db,
@@ -43,7 +41,7 @@ func main() {
 	)
 	s.Start()
 	// Start API server
-	if err := api.StartServer(cfg, mtxService); err != nil {
+	if err := api.StartServer(cfg, jobService); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 }

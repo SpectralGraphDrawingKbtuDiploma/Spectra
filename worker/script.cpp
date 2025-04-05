@@ -1,6 +1,5 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include <iomanip>
 #include <Eigen/Eigenvalues>
 #include <iostream>
 #include <fstream>
@@ -12,6 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <iomanip>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -373,8 +373,11 @@ static int powerIterationKoren(SparseMatrix<double,RowMajor>& M, VectorXd& degre
   double mult1_denom = firstVec.dot(firstVecD);
   VectorXd residual(n);
   int num_iterations1 = 0;
+  const int max_iter = 10000; // maximum iterations as safeguard
+  double prev_diff = std::numeric_limits<double>::infinity();
+
   auto startTimer = chrono::high_resolution_clock::now();
-  while (true) {
+  while (num_iterations1 < max_iter) {
     uk = uk_hat;
     double mult1_num = uk.dot(firstVecD);
     uk = uk - (mult1_num / mult1_denom) * firstVec;
@@ -382,13 +385,34 @@ static int powerIterationKoren(SparseMatrix<double,RowMajor>& M, VectorXd& degre
     uk_hat.normalize();
     num_iterations1++;
     residual = uk - uk_hat;
-    if (residual.norm() < eps)
+    double diff = residual.norm();
+
+    // Align sign to avoid oscillations:
+    if (uk_hat.dot(uk) < 0)
+      uk_hat = -uk_hat;
+
+    if (diff < eps)
       break;
+
+    // Check for stagnation every 100 iterations.
+    if (num_iterations1 % 100 == 0) {
+      if (fabs(diff - prev_diff) < 1e-12 && diff > eps * 10) {
+        cout << "Stagnation detected in second eigenvector iteration at iteration "
+             << num_iterations1 << ", diff = " << diff << endl;
+        break;
+      }
+      prev_diff = diff;
+    }
   }
+  if(num_iterations1 >= max_iter)
+    cout << "Warning: second eigenvector power iteration did not converge within "
+         << max_iter << " iterations." << endl;
+
   cout << "Num iterations for second eigenvector: " << num_iterations1 << endl;
   secondVec = uk_hat;
   auto endTimer = chrono::high_resolution_clock::now();
-  cout << "Second eigenvector computation time: " << chrono::duration<double>(endTimer - startTimer).count() << " s." << endl;
+  cout << "Second eigenvector computation time: "
+       << chrono::duration<double>(endTimer - startTimer).count() << " s." << endl;
 
   eps = 2.0 * eps;
   cout << "Using eps " << eps << " for third eigenvector" << endl;
@@ -396,8 +420,9 @@ static int powerIterationKoren(SparseMatrix<double,RowMajor>& M, VectorXd& degre
   double mult2_denom = secondVec.dot(secondVecD);
   uk_hat = thirdVec;
   int num_iterations2 = 0;
+  prev_diff = std::numeric_limits<double>::infinity();
   startTimer = chrono::high_resolution_clock::now();
-  while (true) {
+  while (num_iterations2 < max_iter) {
     uk = uk_hat;
     double mult1_num = uk.dot(firstVecD);
     uk = uk - (mult1_num / mult1_denom) * firstVec;
@@ -407,16 +432,37 @@ static int powerIterationKoren(SparseMatrix<double,RowMajor>& M, VectorXd& degre
     uk_hat.normalize();
     num_iterations2++;
     residual = uk - uk_hat;
-    if (residual.norm() < eps)
+    double diff = residual.norm();
+
+    // Align sign to avoid oscillation.
+    if (uk_hat.dot(uk) < 0)
+      uk_hat = -uk_hat;
+
+    if (diff < eps)
       break;
+    if (num_iterations2 % 100 == 0) {
+      if (fabs(diff - prev_diff) < 1e-12 && diff > eps * 10) {
+        cout << "Stagnation detected in third eigenvector iteration at iteration "
+             << num_iterations2 << ", diff = " << diff << endl;
+        break;
+      }
+      prev_diff = diff;
+    }
   }
+  if(num_iterations2 >= max_iter)
+    cout << "Warning: third eigenvector power iteration did not converge within "
+         << max_iter << " iterations." << endl;
+
   cout << "Num iterations for third eigenvector: " << num_iterations2 << endl;
   thirdVec = uk_hat;
   auto endTimer2 = chrono::high_resolution_clock::now();
-  cout << "Third eigenvector computation time: " << chrono::duration<double>(endTimer2 - startTimer).count() << " s." << endl;
-  cout << "Dot products of eigenvectors: " << firstVec.dot(secondVec) << " " << firstVec.dot(thirdVec) << " " << secondVec.dot(thirdVec) << endl;
+  cout << "Third eigenvector computation time: "
+       << chrono::duration<double>(endTimer2 - startTimer).count() << " s." << endl;
+  cout << "Dot products of eigenvectors: " << firstVec.dot(secondVec) << " "
+       << firstVec.dot(thirdVec) << " " << secondVec.dot(thirdVec) << endl;
   return 0;
 }
+
 
 // ---------------------------------------------------------------------
 // Tutte Refinement: Multiply the coordinate vectors repeatedly with a modified matrix.
@@ -437,8 +483,8 @@ static int RefineTutte(SparseMatrix<double,RowMajor>& M, VectorXd& secondVec, Ve
 // ---------------------------------------------------------------------
 // Write the computed 2D coordinates (using second and third eigenvectors) to an output file.
 static int writeCoords(SparseMatrix<double,RowMajor>& M, VectorXd& firstVec, VectorXd& secondVec, VectorXd& thirdVec,
-                       int coarseningType, int doHDE, int refineType, double eps, const char *inputFilename, std::string input_path) {
-  string outFilename = input_path + "/embedding.txt";
+                       int coarseningType, int doHDE, int refineType, double eps, const char *inputFilename, std::string output_path) {
+  string outFilename = output_path + "/embedding.txt";
   ofstream fout(outFilename);
   if (!fout.is_open()) {
     cerr << "Error: Cannot open output file " << outFilename << endl;
@@ -524,9 +570,8 @@ int main(int argc, char **argv) {
     cout << "    <0/1/2/3>: refinement (0: none, 1: Koren, 2: Tutte, 3: Koren+Tutte)" << endl;
     return 1;
   }
-
   const char *inputFilename = argv[1];
-  std::string input_path(argv[5]);
+  std::string output_path(argv[5]);
   int coarseningType = atoi(argv[2]);
   int doHDE = atoi(argv[3]);
   int refineType = atoi(argv[4]);
@@ -581,7 +626,18 @@ int main(int argc, char **argv) {
     double epsc = 1e-9;
     powerIterationKoren(Mc, degreesc, epsc, firstCoarse, secondCoarse, thirdCoarse, coarseningType);
     if (coarseningType == 2) {
-      writeCoords(Mc, firstCoarse, secondCoarse, thirdCoarse, coarseningType, doHDE, refineType, epsc, inputFilename, input_path);
+      writeCoords(
+        Mc,
+        firstCoarse,
+        secondCoarse,
+        thirdCoarse,
+        coarseningType,
+        doHDE,
+        refineType,
+        epsc,
+        inputFilename,
+        output_path
+        );
       return 0;
     }
   }
@@ -631,7 +687,7 @@ int main(int argc, char **argv) {
       RefineTutte(M, secondVec, thirdVec, numTutteSmoothing);
       powerIterationKoren(M, degrees, eps, firstVec, secondVec, thirdVec, 0);
     }
-    writeCoords(M, firstVec, secondVec, thirdVec, coarseningType, doHDE, refineType, 0, inputFilename, input_path);
+    writeCoords(M, firstVec, secondVec, thirdVec, coarseningType, doHDE, refineType, 0, inputFilename, output_path);
   }
 
   free(g->rowOffsets);

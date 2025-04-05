@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"backend/internal/models"
@@ -14,7 +15,7 @@ type JobService struct {
 	jobCreatedCh chan struct{}
 }
 
-func NewMtxService(db *sql.DB, jobCreatedCh chan struct{}) *JobService {
+func NewJobService(db *sql.DB, jobCreatedCh chan struct{}) *JobService {
 	return &JobService{DB: db, jobCreatedCh: jobCreatedCh}
 }
 
@@ -88,8 +89,59 @@ func (s *JobService) ListJobs(status *string) ([]models.JobList, error) {
 	return files, nil
 }
 
-func (s *JobService) ScheduleJobInTx(id int, tx *sql.Tx) error {
-	que := "UPDATE jobs SET status='executing' WHERE id = $1"
-	_, err := tx.Exec(que, id)
+func (s *JobService) SetStatus(id int, status string, tx *sql.Tx) error {
+	que := "UPDATE jobs SET status=$1 WHERE id = $2"
+	_, err := tx.Exec(que, status, id)
 	return err
+}
+
+func (t *JobService) CompleteTaskInTx(id int, status string, errorMsg *string, resURL *string, tx *sql.Tx) error {
+	var query string
+	var args []interface{}
+
+	if errorMsg == nil {
+		query = `UPDATE jobs SET status = $1 WHERE id = $2`
+		args = []interface{}{status, id}
+	} else {
+		query = `UPDATE jobs SET status = $1, error = $2 WHERE id = $3`
+		args = []interface{}{status, *errorMsg, id}
+	}
+
+	result, err := tx.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to complete task: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %w", err)
+	}
+
+	// If no rows affected, it means no job with the given ID exists
+	if rowsAffected == 0 {
+		return fmt.Errorf("no job found with ID: %d", id)
+	}
+
+	if resURL == nil {
+		return nil
+	}
+
+	query = `UPDATE jobs SET result_url = $1 WHERE id = $2`
+	args = []interface{}{*resURL, id}
+
+	result, err = tx.Exec(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to complete job: %w", err)
+	}
+
+	rowsAffected, err = result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no job found with ID: %d", id)
+	}
+
+	return nil
 }
