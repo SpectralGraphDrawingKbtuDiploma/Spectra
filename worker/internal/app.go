@@ -69,16 +69,7 @@ func (app *App) createJob(graph GraphDTO) {
 		return
 	}
 	_, _ = file.WriteString(*graph.Content)
-	//for i := 0; i < len(graph.Edges); i += 2 {
-	//	_, err = file.Write([]byte(fmt.Sprintf("%v %v\n", graph.Edges[i], graph.Edges[i+1])))
-	//	if err != nil {
-	//		_, _ = logFile.WriteString(fmt.Sprintf("Failed to write to file: %v\n", err))
-	//		return
-	//	}
-	//}
-	fmt.Println("$$$", path)
 	cmd := exec.Command("sh", "draw.sh", fmt.Sprintf("%s/graph.txt", path), path, *graph.ID)
-	//cmd := exec.Command(fmt.Sprintf("ls -l"))
 	err = cmd.Start()
 	if err != nil {
 		_, _ = logFile.WriteString(fmt.Sprintf("Failed to start command: %v\n", err))
@@ -142,11 +133,9 @@ func (app *App) PingHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if entry.Name() == "error.txt" {
-			// Check if error.txt exists and read it
 			res.Status = "completed"
 			errFilePath := filepath.Join(path, "error.txt")
 			if errFileContent, err := os.ReadFile(errFilePath); err == nil && len(errFileContent) > 0 {
-				// If error.txt exists and has content, read it into Err field
 				errContent := string(errFileContent)
 				res.Err = &errContent
 			}
