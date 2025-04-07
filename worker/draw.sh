@@ -44,6 +44,25 @@ if ! ./draw "$1" "$2/embedding.txt" "$2/out.png"; then
     exit 1
 fi
 
+echo "Compiling C++ code..."
+if ! g++ eigen3D.cpp -I/usr/local/include/eigen3 -I/usr/local/include/spectra -o spectral_embed_3d -O2; then
+    log_error "Failed to compile C++ code" "$2"
+    exit 1
+fi
+
+echo "Running spectral embedding 3D..."
+if ! ./spectral_embed_3d "$1" 1 1 3 "$2"; then
+    log_error "Failed to run spectral embedding" "$2"
+    exit 1
+fi
+
+# Generating .obj file
+echo "Generating .obj file..."
+if ! /app/venv/bin/python ./gen_obj.py "$2"; then
+    log_error "Failed to upload files to storage" "$2"
+    exit 1
+fi
+
 # Upload results to S3/MinIO
 echo "Uploading results to storage..."
 if ! /app/venv/bin/python ./upload_to_s3.py --local-path "$2" --s3-directory "$3"; then

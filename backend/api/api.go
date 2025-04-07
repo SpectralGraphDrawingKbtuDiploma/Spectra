@@ -19,10 +19,10 @@ func StartServer(cfg *config.Config, service *service.JobService) error {
 	router := mux.NewRouter()
 
 	// API routes
-	router.HandleFunc("/api/mtx", mtxHandler.UploadJob).Methods("POST")
-	router.HandleFunc("/api/mtx", mtxHandler.ListJobs).Methods("GET")
-	router.HandleFunc("/api/mtx/{id:[0-9]+}", mtxHandler.GetJob).Methods("GET")
-	router.HandleFunc("/api/mtx/{id:[0-9]+}/download", mtxHandler.DownloadJob).Methods("GET")
+	router.HandleFunc("/api/jobs", mtxHandler.UploadJob).Methods("POST")
+	router.HandleFunc("/api/jobs", mtxHandler.ListJobs).Methods("GET")
+	router.HandleFunc("/api/jobs/{id:[0-9]+}", mtxHandler.GetJob).Methods("GET")
+	router.HandleFunc("/api/jbos/{id:[0-9]+}/download", mtxHandler.DownloadJob).Methods("GET")
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

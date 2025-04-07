@@ -35,10 +35,10 @@ RUN mkdir -p /usr/local/include/eigen3 && \
     cp -r eigen-3.4.0/Eigen $EIGEN_PATH
 
 # Устанавливаем Spectra как header-only библиотеку
-#ARG SPECTRA_PATH=/usr/local/include/spectra/
-#RUN git clone --branch master https://github.com/yixuan/spectra.git /tmp/spectra && \
-#    cp -r /tmp/spectra/include $SPECTRA_PATH && \
-#    rm -rf /tmp/spectra
+ARG SPECTRA_PATH=/usr/local/include/spectra/
+RUN git clone --branch master https://github.com/yixuan/spectra.git /tmp/spectra && \
+    cp -r /tmp/spectra/include $SPECTRA_PATH && \
+    rm -rf /tmp/spectra
 
 # Копируем сервер из первого этапа
 COPY --from=builder /app/server /app/server
@@ -52,6 +52,8 @@ COPY ./draw.c .
 COPY ./stb_image_write.h .
 COPY ./upload_to_s3.py .
 COPY ./cleaner.py .
+COPY ./eigen3D.cpp .
+COPY ./gen_obj.py .
 
 # Открываем порт
 EXPOSE 8080
