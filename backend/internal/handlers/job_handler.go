@@ -64,7 +64,7 @@ func (h *JobsHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	job, err := h.Service.GetJob(id)
+	job, err := h.Service.GetJobWithNoContent(id)
 	if err != nil {
 		if err.Error() == "file not found" {
 			http.Error(w, "File not found", http.StatusNotFound)

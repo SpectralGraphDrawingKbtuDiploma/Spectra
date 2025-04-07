@@ -11,6 +11,8 @@ type Job struct {
 	Dimensions string    `json:"dimensions"`
 	CreatedAt  time.Time `json:"created_at"`
 	Status     string    `json:"status"`
+	Error      *string   `json:"error,omitempty"`
+	ResUrl     *string   `json:"res_url,omitempty"`
 }
 
 type JobList struct {

@@ -57,6 +57,20 @@ func (s *JobService) GetJob(id int) (models.Job, error) {
 	return file, err
 }
 
+func (s *JobService) GetJobWithNoContent(id int) (models.Job, error) {
+	var file models.Job
+	err := s.DB.QueryRow(
+		"SELECT id, filename, dimensions, created_at, status, error, result_url FROM jobs WHERE id = $1",
+		id,
+	).Scan(&file.ID, &file.Filename, &file.Dimensions, &file.CreatedAt, &file.Status, &file.Error, &file.ResUrl)
+
+	if err == sql.ErrNoRows {
+		return file, errors.New("file not found")
+	}
+
+	return file, err
+}
+
 func (s *JobService) ListJobs(status *string) ([]models.JobList, error) {
 	var rows *sql.Rows
 	var err error
