@@ -1,13 +1,13 @@
 package api
 
 import (
-	"backend/internal/service"
-	"log"
-	"net/http"
-
 	"backend/internal/config"
 	"backend/internal/handlers"
+	"backend/internal/service"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors" // добавьте это
+	"log"
+	"net/http"
 )
 
 // StartServer starts the HTTP server
@@ -30,7 +30,17 @@ func StartServer(cfg *config.Config, service *service.JobService) error {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// Start server
+	// CORS middleware
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // или указать конкретные домены
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	// Start server with CORS handler
+	handler := c.Handler(router)
+
 	log.Printf("Starting server on port %s", cfg.ServerPort)
-	return http.ListenAndServe(":"+cfg.ServerPort, router)
+	return http.ListenAndServe(":"+cfg.ServerPort, handler)
 }

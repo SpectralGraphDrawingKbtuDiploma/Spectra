@@ -77,7 +77,12 @@ services:
       /usr/bin/mc anonymous set download local/artifacts;
       exit 0;
       "
-
+  web:
+    build:
+      context: ./Front
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
 volumes:
   postgres_data:
   minio_data:
